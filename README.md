@@ -1,44 +1,28 @@
-# WordCloud Generator
+# Neural Search Engine
 
-This project generates a word cloud visualization from a given text input. The word cloud highlights the most frequent words in the text, with their sizes proportional to their frequency.
+A semantic search engine that uses neural embeddings and FAISS vector search for intelligent document retrieval. Built with FastAPI, Sentence Transformers, and React.
 
 ## Features
-- Generates a word cloud from text data.
-- Supports stopwords to exclude common words.
-- Customizable background color.
-- Save the word cloud as an image file.
-- Export the word cloud along with metadata (e.g., word frequencies) to a PDF report.
-- Create animated word clouds that transition between different shapes or color schemes.
-- Real-time word cloud updates with dynamic text data.
 
-## Requirements
-Make sure you have the following Python packages installed:
-- `wordcloud`
-- `matplotlib`
-- `fpdf`
+- **Semantic Search**: Find documents by meaning, not just keywords
+- **Neural Embeddings**: Uses Sentence-BERT models for high-quality text embeddings
+- **Vector Search**: FAISS-powered similarity search at scale
+- **Cross-Encoder Reranking**: Optional reranking for improved precision
+- **Intent Classification**: Automatically detects search intent
+- **REST API**: FastAPI backend with full CRUD for documents
+- **React Frontend**: Modern UI with search, document management, and analytics
 
-You can install the required packages using the following command:
+## Quick Start
+
 ```bash
+# Install backend dependencies
 pip install -r requirements.txt
+
+# Initialize database and start server
+uvicorn backend.main:app --reload
+
+# In a separate terminal, start frontend
+cd frontend && npm install && npm run dev
 ```
 
-## Usage
-1. Provide your text data via a file using the `--input` argument:
-```bash
-python src/main.py --input path/to/your/textfile.txt
-```
-2. The word cloud will be displayed in a window.
-3. The word cloud will be saved as an image file (`wordcloud_output.png`).
-4. A PDF report (`wordcloud_report.pdf`) containing the word cloud and metadata will be generated.
-
-## Example
-```python
-text = "Your text data goes here"
-wordcloud = WordCloud(stopwords=STOPWORDS, background_color="white").generate(text)
-plt.imshow(wordcloud, interpolation='bilinear')
-plt.axis("off")
-plt.show()
-```
-
-## License
-This project is licensed under the MIT License.
+Visit `http://localhost:5173` for the UI, or `http://localhost:8000/docs` for API docs.
