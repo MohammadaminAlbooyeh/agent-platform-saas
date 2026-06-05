@@ -8,9 +8,9 @@ class EntityExtractor:
         "url": r"https?://[^\s]+",
         "phone": r"\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b",
         "date": r"\b(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{4}[-/]\d{1,2}[-/]\d{1,2})\b",
-        "year": r"\b(19|20)\d{2}\b",
+        "year": r"\b(?:19|20)\d{2}\b",
         "number": r"\b\d+(?:\.\d+)?\b",
-        "currency": r"\b[\$\€\£\¥]\d+(?:\.\d{1,2})?\b",
+        "currency": r"(?:^|\s)[$€£¥]\d+(?:\.\d{1,2})?(?=\s|$)",
         "person": r"\b(?:Mr|Mrs|Ms|Dr|Prof)\.?\s+[A-Z][a-z]+\b",
     }
 

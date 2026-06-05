@@ -26,11 +26,9 @@ class SearchService:
         if not doc_ids:
             return {"query": query, "intent": intent, "results": [], "total": 0}
 
-        docs = []
-        for doc_id in doc_ids:
-            doc = self.db.query(Document).filter(Document.id == doc_id).first()
-            if doc:
-                docs.append(doc)
+        doc_records = self.db.query(Document).filter(Document.id.in_(doc_ids)).all()
+        doc_map = {d.id: d for d in doc_records}
+        docs = [doc_map[doc_id] for doc_id in doc_ids if doc_id in doc_map]
 
         if use_rerank and docs:
             doc_texts = [(doc.id, doc.title + " " + doc.content) for doc in docs]

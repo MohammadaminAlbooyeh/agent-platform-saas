@@ -1,18 +1,24 @@
-import hashlib
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Header
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
 from backend.models.user import User
 from backend.utils.logger import logger
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+    return pwd_context.hash(password)
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    return pwd_context.verify(password, hashed)
 
 
 def generate_token() -> str:
@@ -51,7 +57,7 @@ def register(username: str, email: str, password: str, db: Session = Depends(get
 @router.post("/login")
 def login(username: str, password: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
-    if not user or user.password_hash != hash_password(password):
+    if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     token = generate_token()
     user.token = token

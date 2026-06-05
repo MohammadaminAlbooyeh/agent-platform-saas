@@ -16,7 +16,11 @@ from backend.indexing.index_manager import IndexManager
 from backend.api.dependencies import (
     get_search_service, get_document_service, get_analytics_service,
     get_embedding_service, get_index_manager, get_embedding_generator,
+    get_vector_store,
 )
+from backend.api.auth import get_current_user
+from backend.search.vector_store import VectorStore
+from backend.models.user import User
 from backend.utils.logger import logger
 
 router = APIRouter()
@@ -28,8 +32,10 @@ def health():
 
 
 @router.post("/documents", response_model=DocumentResponse, status_code=201)
-def create_document(payload: DocumentCreate, doc_service: DocumentService = Depends(get_document_service),
-                    emb_service: EmbeddingService = Depends(get_embedding_service)):
+def create_document(payload: DocumentCreate,
+                    doc_service: DocumentService = Depends(get_document_service),
+                    emb_service: EmbeddingService = Depends(get_embedding_service),
+                    _current_user: User = Depends(get_current_user)):
     doc = doc_service.create_document(
         title=payload.title,
         content=payload.content,
@@ -59,20 +65,27 @@ def get_document(doc_id: int, doc_service: DocumentService = Depends(get_documen
 @router.put("/documents/{doc_id}", response_model=DocumentResponse)
 def update_document(doc_id: int, payload: DocumentUpdate,
                     doc_service: DocumentService = Depends(get_document_service),
-                    emb_service: EmbeddingService = Depends(get_embedding_service)):
+                    emb_service: EmbeddingService = Depends(get_embedding_service),
+                    vector_store: VectorStore = Depends(get_vector_store),
+                    _current_user: User = Depends(get_current_user)):
     update_data = payload.model_dump(exclude_unset=True)
     doc = doc_service.update_document(doc_id, **update_data)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+    vector_store.remove_vectors([doc_id])
     emb_service.index_document(doc)
     return doc.to_dict()
 
 
 @router.delete("/documents/{doc_id}", status_code=204)
-def delete_document(doc_id: int, doc_service: DocumentService = Depends(get_document_service)):
+def delete_document(doc_id: int,
+                    doc_service: DocumentService = Depends(get_document_service),
+                    vector_store: VectorStore = Depends(get_vector_store),
+                    _current_user: User = Depends(get_current_user)):
     deleted = doc_service.delete_document(doc_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Document not found")
+    vector_store.remove_vectors([doc_id])
 
 
 @router.post("/search", response_model=SearchResponse)
@@ -105,7 +118,9 @@ def generate_embedding(text: str = Query(..., description="Text to embed"),
 
 
 @router.post("/index/reindex")
-def reindex(db: Session = Depends(get_db), emb_service: EmbeddingService = Depends(get_embedding_service)):
+def reindex(db: Session = Depends(get_db),
+            emb_service: EmbeddingService = Depends(get_embedding_service),
+            _current_user: User = Depends(get_current_user)):
     emb_service.index_all_documents(db)
     return {"message": "Reindexing completed"}
 
