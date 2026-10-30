@@ -1,9 +1,0 @@
-__pycache__/
-.git/
-.gitignore
-.env
-node_modules/
-dist/
-.vite/
-*.md
-Dockerfile.frontend
