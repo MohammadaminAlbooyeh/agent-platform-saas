@@ -1,8 +1,8 @@
 """Orchestrator that routes incoming requests to the right agent."""
 
-from .query_agent import QueryAgent
-from .processor_agent import ProcessorAgent
-from .research_agent import ResearchAgent
+from agents.query_agent import QueryAgent
+from agents.processor_agent import ProcessorAgent
+from agents.research_agent import ResearchAgent
 
 
 class Orchestrator:

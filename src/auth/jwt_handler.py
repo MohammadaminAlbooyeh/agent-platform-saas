@@ -1,15 +1,29 @@
 """Admin dashboard authentication (separate from tenant API keys)."""
 
-from jose import jwt
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from jose import jwt, JWTError
+
+from config.settings import settings
 
 
-class JWTHandler:
-    """Handles JWT creation and validation for admin auth."""
+def create_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a JWT access token for an admin user."""
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(hours=24))
+    to_encode = {"sub": subject, "exp": expire}
+    return jwt.encode(to_encode, settings.jwt_secret, algorithm="HS256")
 
-    @staticmethod
-    def create_token(subject: str, secret: str) -> str:
-        return jwt.encode({"sub": subject}, secret, algorithm="HS256")
 
-    @staticmethod
-    def decode_token(token: str, secret: str) -> dict:
-        return jwt.decode(token, secret, algorithms=["HS256"])
+def decode_token(token: str) -> dict:
+    """Decode and validate a JWT token."""
+    return jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+
+
+def validate_token(token: str) -> bool:
+    """Return True if the token is valid and not expired."""
+    try:
+        decode_token(token)
+        return True
+    except JWTError:
+        return False
