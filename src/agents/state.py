@@ -13,3 +13,5 @@ class AgentState(TypedDict, total=False):
     result: Any
     error: Optional[str]
     steps: list
+    tokens_used: int
+    tool_calls: int

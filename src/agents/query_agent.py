@@ -3,32 +3,42 @@
 from langgraph.graph import StateGraph, END
 
 from agents.state import AgentState
+from mcp_tools.database_tool import run_scoped_query
+from services.token_estimator import estimate_tokens
 
 
 def validate_query(state: AgentState) -> AgentState:
-    """Validate the incoming query."""
-    query = state.get("input", "")
-    if not query:
-        state["error"] = "Empty query"
+    """Validate the incoming query payload."""
+    payload = state.get("input") or {}
+    query_name = payload.get("query") or payload.get("q") if isinstance(payload, dict) else None
+    if not query_name:
+        state["error"] = "Missing 'query' in payload"
     return state
 
 
 def execute_query(state: AgentState) -> AgentState:
-    """Execute the database query (placeholder for real DB/Tool call)."""
+    """Execute an allowlisted, tenant-scoped database query."""
     if state.get("error"):
         return state
-    query = state.get("input", "")
+    payload = state.get("input") or {}
+    query_name = payload.get("query") or payload.get("q")
+    tenant_id = state.get("tenant_id")
+    data = run_scoped_query(tenant_id, query_name)
     state["result"] = {
         "agent": "query",
-        "tenant_id": state.get("tenant_id"),
-        "query": query,
-        "rows": [],
+        "tenant_id": tenant_id,
+        "query": data["query"],
+        "rows": data["rows"],
+        "row_count": data["row_count"],
     }
+    state["tool_calls"] = 1
     return state
 
 
 def format_result(state: AgentState) -> AgentState:
-    """Format the final result."""
+    """Format the final result and estimate token usage."""
+    if state.get("result") is not None:
+        state["tokens_used"] = estimate_tokens(state.get("input")) + estimate_tokens(state["result"])
     return state
 
 
@@ -49,17 +59,20 @@ graph = build_graph().compile()
 
 
 class QueryAgent:
-    """Agent that executes database queries on behalf of a tenant."""
+    """Agent that executes allowlisted, tenant-scoped database queries."""
 
-    async def run(self, query: str, tenant_id: str) -> dict:
+    async def run(self, payload: dict, tenant_id: str) -> dict:
         """Execute a query scoped to the given tenant."""
         initial: AgentState = {
             "tenant_id": tenant_id,
             "agent_type": "query",
-            "input": query,
+            "input": payload or {},
             "steps": [],
         }
         final = graph.invoke(initial)
         if final.get("error"):
             return {"agent": "query", "tenant_id": tenant_id, "error": final["error"]}
-        return final.get("result", {"agent": "query", "tenant_id": tenant_id})
+        result = final.get("result", {"agent": "query", "tenant_id": tenant_id})
+        result["tokens_used"] = final.get("tokens_used", 0)
+        result["tool_calls"] = final.get("tool_calls", 0)
+        return result
