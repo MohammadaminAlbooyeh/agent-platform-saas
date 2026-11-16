@@ -4,10 +4,12 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 
 from auth.admin_auth import authenticate_admin
 from auth.jwt_handler import decode_token, JWTError
+from services.quota_service import QuotaService
 from services.tenant_service import TenantService
 
 router = APIRouter(prefix="/admin")
 tenant_service = TenantService()
+quota_service = QuotaService()
 
 
 def require_admin(request: Request) -> str:
@@ -42,11 +44,17 @@ async def list_tenants(request: Request, admin: str = Depends(require_admin)) ->
 
 @router.post("/quota-override")
 async def override_quota(request: Request, body: dict, admin: str = Depends(require_admin)) -> dict:
-    """Override a tenant's quota (admin only)."""
+    """Persist an admin-set token quota override for a tenant."""
     tenant_id = body.get("tenant_id")
+    token_limit = body.get("token_limit")
     if not tenant_id:
         raise HTTPException(status_code=400, detail="tenant_id required")
-    return {"status": "overridden", "tenant_id": tenant_id}
+    if not isinstance(token_limit, int) or token_limit < 0:
+        raise HTTPException(status_code=400, detail="token_limit must be a non-negative integer")
+    if not tenant_service.get_tenant(tenant_id):
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    override = quota_service.set_override(tenant_id, token_limit)
+    return {"status": "overridden", **override}
 
 
 @router.post("/login")

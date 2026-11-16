@@ -16,6 +16,20 @@ os.environ["JWT_SECRET"] = "test-secret"
 
 from database.base import Base, engine  # noqa: E402
 
+# Import every model so its table is registered on Base.metadata before
+# create_all() runs below — otherwise a model only imported lazily by a
+# later test file would never get its table created, and tests would only
+# pass by accident of file ordering (e.g. only after test_api.py's app
+# startup imports everything first).
+from database.models import (  # noqa: E402, F401
+    admin_user,
+    invoice,
+    quota_override,
+    task,
+    tenant,
+    usage_record,
+)
+
 Base.metadata.create_all(bind=engine)
 
 

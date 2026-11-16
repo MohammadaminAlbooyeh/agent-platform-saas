@@ -28,6 +28,7 @@ from database.models.usage_record import UsageRecord  # noqa: E402
 from database.models.invoice import Invoice  # noqa: E402
 from database.models.task import Task  # noqa: E402
 from database.models.admin_user import AdminUser  # noqa: E402
+from database.models.quota_override import QuotaOverride  # noqa: E402
 
 target_metadata = Base.metadata
 

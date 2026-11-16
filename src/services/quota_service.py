@@ -2,6 +2,7 @@
 
 from billing.plans import PLANS
 from database.base import SessionLocal
+from database.models.quota_override import QuotaOverride
 from database.models.tenant import Tenant
 from services.usage_service import UsageService
 
@@ -20,8 +21,30 @@ class QuotaService:
         return PLANS.get(plan, PLANS["free"])
 
     def get_token_limit(self, tenant_id: str, plan: str) -> int:
-        """Return the effective token limit for a tenant (plan default)."""
+        """Return the effective token limit: an admin override if set, else the plan default."""
+        db = SessionLocal()
+        try:
+            override = db.query(QuotaOverride).filter(QuotaOverride.tenant_id == tenant_id).first()
+            if override is not None:
+                return override.token_limit
+        finally:
+            db.close()
         return self.get_plan_limits(plan).get("tokens", 0)
+
+    def set_override(self, tenant_id: str, token_limit: int) -> dict:
+        """Create or update an admin-set token-limit override for a tenant."""
+        db = SessionLocal()
+        try:
+            override = db.query(QuotaOverride).filter(QuotaOverride.tenant_id == tenant_id).first()
+            if override is None:
+                override = QuotaOverride(tenant_id=tenant_id, token_limit=token_limit)
+                db.add(override)
+            else:
+                override.token_limit = token_limit
+            db.commit()
+            return {"tenant_id": tenant_id, "token_limit": token_limit}
+        finally:
+            db.close()
 
     def get_quota_status(self, tenant_id: str) -> dict:
         """Return {limit, used, remaining, ratio} for the tenant's current billing cycle.

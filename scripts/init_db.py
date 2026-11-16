@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 # Import all models so they register on Base.metadata before create_all.
 from database.base import init_db, Base  # noqa: F401
-from database.models import tenant, usage_record, invoice, task, admin_user  # noqa: F401
+from database.models import tenant, usage_record, invoice, task, admin_user, quota_override  # noqa: F401
 
 
 def main() -> None:

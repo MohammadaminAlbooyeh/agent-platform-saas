@@ -73,3 +73,24 @@ def test_admin_login_and_list_tenants(client):
 def test_admin_login_rejects_bad_credentials(client):
     r = client.post("/admin/login", json={"username": "admin", "password": "wrong"})
     assert r.status_code == 401
+
+
+def test_admin_quota_override_persists_and_is_enforced(client, tenant):
+    tenant_id, api_key = tenant
+
+    login = client.post("/admin/login", json={"username": "admin", "password": "admin"})
+    token = login.json()["access_token"]
+    headers = {"authorization": f"Bearer {token}"}
+
+    r = client.post("/admin/quota-override", json={"tenant_id": tenant_id, "token_limit": 100}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json() == {"status": "overridden", "tenant_id": tenant_id, "token_limit": 100}
+
+    # The override (100 tokens) is far below what a single agent call needs by
+    # default, so the next call should now be quota-rejected (HTTP 402).
+    r = client.post(
+        "/agent/execute",
+        json={"agent_type": "query", "payload": {"q": "select 1" * 500}},
+        headers={"x-api-key": api_key},
+    )
+    assert r.status_code == 402
