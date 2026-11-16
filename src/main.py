@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from config.settings import settings
+from config.validation import validate_production_config
 from database.base import init_db
 from auth.admin_auth import bootstrap_admin
 
@@ -36,6 +37,7 @@ app = FastAPI(title="Agent Platform SaaS", version="0.1.0")
 @app.on_event("startup")
 async def startup() -> None:
     """Run startup hooks: initialize DB and verify config."""
+    validate_production_config(settings)
     init_db()
     bootstrap_admin()
 
