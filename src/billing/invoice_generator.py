@@ -1,12 +1,13 @@
 """Builds invoice line items from usage records."""
 
+from billing.plans import COST_PER_1K_TOKENS
 from services.usage_service import UsageService
 
 
 class InvoiceGenerator:
     """Builds invoice line items from usage records."""
 
-    COST_PER_1K_TOKENS = 0.002
+    COST_PER_1K_TOKENS = COST_PER_1K_TOKENS
 
     def generate(self, tenant_id: str, usage: dict) -> dict:
         """Build an invoice from aggregated usage."""

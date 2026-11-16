@@ -17,9 +17,7 @@ async def execute(request: Request, payload: AgentExecuteRequest) -> dict:
     tenant_id = request.state.tenant_id
     if not tenant_id:
         raise HTTPException(status_code=401, detail="Missing or invalid API key")
-    result = await agent_service.execute(
-        payload.agent_type, payload.payload, tenant_id, estimated_tokens=0
-    )
+    result = await agent_service.execute(payload.agent_type, payload.payload, tenant_id)
     if "error" in result:
         raise HTTPException(status_code=402, detail=result["error"])
     return {"task_id": result.get("agent", "task"), "status": "completed"}
@@ -33,9 +31,7 @@ async def stream(request: Request, payload: AgentExecuteRequest):
         raise HTTPException(status_code=401, detail="Missing or invalid API key")
 
     async def event_stream():
-        result = await agent_service.execute(
-            payload.agent_type, payload.payload, tenant_id, estimated_tokens=0
-        )
+        result = await agent_service.execute(payload.agent_type, payload.payload, tenant_id)
         yield f"data: {json.dumps(result)}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

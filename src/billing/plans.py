@@ -24,6 +24,9 @@ PLANS = {
     },
 }
 
+# Metered cost per 1,000 tokens, used to price agent usage into invoice line items.
+COST_PER_1K_TOKENS = 0.002
+
 PRICE_IDS = {
     "pro": "price_pro_monthly",
     "enterprise": "price_enterprise_monthly",

@@ -47,7 +47,12 @@ def test_usage_endpoint(client, tenant):
     )
     r = client.get(f"/usage/{tenant_id}", headers={"x-api-key": api_key})
     assert r.status_code == 200
-    assert r.json()["tenant_id"] == tenant_id
+    body = r.json()
+    assert body["tenant_id"] == tenant_id
+    # Real usage recorded by the agent run, not the old always-zero placeholder.
+    assert body["tokens"] > 0
+    assert body["tool_calls"] > 0
+    assert body["record_count"] == 1
 
 
 def test_usage_cannot_view_other_tenant(client, tenant):

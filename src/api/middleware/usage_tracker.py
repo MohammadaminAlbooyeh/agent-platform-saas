@@ -1,40 +1,23 @@
-"""Usage tracking middleware: records tokens/requests consumed per call."""
+"""Request timing middleware.
 
-import json
+Usage (tokens/cost/tool-calls) is recorded where the real cost is known —
+by `AgentService.execute` right after an agent run — rather than guessed
+here for every request.
+"""
+
 import time
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
-from database.base import SessionLocal
-from database.models.usage_record import UsageRecord
-
 
 class UsageTrackerMiddleware(BaseHTTPMiddleware):
-    """Records tokens and requests consumed per API call for the current tenant."""
+    """Measures and reports per-request processing time."""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        tenant_id = getattr(request.state, "tenant_id", None)
-        start = time.time()
-
+        start = time.perf_counter()
         response = await call_next(request)
-
-        if tenant_id:
-            db = SessionLocal()
-            try:
-                record = UsageRecord(
-                    id=str(time.time_ns()),
-                    tenant_id=tenant_id,
-                    tokens=0,
-                    cost=0.0,
-                    tool_calls=0,
-                )
-                db.add(record)
-                db.commit()
-            except Exception:
-                db.rollback()
-            finally:
-                db.close()
-
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        response.headers["X-Process-Time-Ms"] = f"{elapsed_ms:.2f}"
         return response
