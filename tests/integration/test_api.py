@@ -75,6 +75,22 @@ def test_admin_login_rejects_bad_credentials(client):
     assert r.status_code == 401
 
 
+def test_stripe_webhook_unverified_without_secret_configured(client):
+    # STRIPE_WEBHOOK_SECRET is unset in tests, so the webhook accepts the raw
+    # event body without signature verification (logged as a warning).
+    r = client.post(
+        "/billing/webhook",
+        json={"type": "invoice.payment_succeeded", "data": {"object": {"id": "in_123", "customer": "cus_1"}}},
+    )
+    assert r.status_code == 200
+    assert r.json() == {"status": "received", "type": "invoice.payment_succeeded"}
+
+
+def test_stripe_webhook_rejects_malformed_payload(client):
+    r = client.post("/billing/webhook", content=b"not json", headers={"content-type": "application/json"})
+    assert r.status_code == 400
+
+
 def test_billing_invoice_generation(client, tenant):
     tenant_id, api_key = tenant
     r = client.post("/billing/invoice", json={}, headers={"x-api-key": api_key})
