@@ -3,9 +3,8 @@
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.status import HTTP_401_UNAUTHORIZED
 
-from auth.api_key import verify_key
+from auth.api_key import hash_key
 from database.base import SessionLocal
 from database.models.tenant import Tenant
 
@@ -22,16 +21,18 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
         try:
             api_key = request.headers.get("x-api-key")
             if api_key:
+                # hash_key is deterministic (sha256 of the key, not per-tenant
+                # salted), so the hash can be looked up directly on the
+                # indexed column instead of scanning every tenant and
+                # verifying each one in turn.
                 tenant = (
                     request.state.db.query(Tenant)
-                    .filter(Tenant.api_key_hash.is_not(None))
-                    .all()
+                    .filter(Tenant.api_key_hash == hash_key(api_key))
+                    .first()
                 )
-                for t in tenant:
-                    if verify_key(api_key, t.api_key_hash):
-                        request.state.tenant = t
-                        request.state.tenant_id = t.id
-                        break
+                if tenant is not None:
+                    request.state.tenant = tenant
+                    request.state.tenant_id = tenant.id
 
             response = await call_next(request)
             return response

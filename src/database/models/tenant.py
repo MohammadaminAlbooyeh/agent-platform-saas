@@ -11,5 +11,5 @@ class Tenant(Base):
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     plan = Column(String, nullable=False, default="free")
-    api_key_hash = Column(String, nullable=False)
+    api_key_hash = Column(String, nullable=False, unique=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
