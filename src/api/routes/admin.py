@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Request, HTTPException, Depends
 
+from auth.admin_auth import authenticate_admin
 from auth.jwt_handler import decode_token, JWTError
 from services.tenant_service import TenantService
 
@@ -53,9 +54,8 @@ async def admin_login(body: dict) -> dict:
     """Admin login: issue a JWT for the admin dashboard."""
     username = body.get("username")
     password = body.get("password")
-    # Stub credential check; integrate with real admin user store in production.
-    if username == "admin" and password == "admin":
+    if username and password and authenticate_admin(username, password):
         from auth.jwt_handler import create_token
-        token = create_token(subject="admin")
+        token = create_token(subject=username)
         return {"access_token": token, "token_type": "bearer"}
     raise HTTPException(status_code=401, detail="Invalid admin credentials")
