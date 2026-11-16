@@ -4,6 +4,7 @@ Registers middleware, startup/shutdown hooks, and includes API routers.
 """
 
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Ensure the `src` directory is importable as a top-level package so that
@@ -31,21 +32,16 @@ from api.routes.usage import router as usage_router
 from api.routes.admin import router as admin_router
 
 
-app = FastAPI(title="Agent Platform SaaS", version="0.1.0")
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    """Run startup hooks: initialize DB and verify config."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run startup hooks, then yield; no shutdown hooks are needed yet."""
     validate_production_config(settings)
     init_db()
     bootstrap_admin()
+    yield
 
 
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    """Run shutdown hooks."""
-    pass
+app = FastAPI(title="Agent Platform SaaS", version="0.1.0", lifespan=lifespan)
 
 
 # Middleware (added in reverse order of execution; last added runs first)
