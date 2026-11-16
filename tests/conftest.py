@@ -32,6 +32,18 @@ from database.models import (  # noqa: E402, F401
 
 Base.metadata.create_all(bind=engine)
 
+# If a real Redis is reachable (e.g. local dev), clear any rate-limit keys
+# left over from previous runs so the rate-limit middleware's token buckets
+# don't leak state across separate test sessions.
+try:
+    import redis as _redis_module
+
+    _test_redis = _redis_module.Redis.from_url("redis://localhost:6379/0", decode_responses=True)
+    for _key in _test_redis.scan_iter("ratelimit:*"):
+        _test_redis.delete(_key)
+except Exception:
+    pass
+
 
 @pytest.fixture(scope="module")
 def client():
