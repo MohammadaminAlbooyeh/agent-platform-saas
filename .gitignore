@@ -13,3 +13,4 @@ build/
 .alembic/
 .mypy_cache/
 .pytest_cache/
+tenant_files/

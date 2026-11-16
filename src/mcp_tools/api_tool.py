@@ -1,6 +1,7 @@
 """API MCP tool with SSRF protection."""
 
 import ipaddress
+import socket
 import urllib.parse
 
 import httpx
@@ -22,15 +23,38 @@ BLOCKED_NETWORKS = [
 
 
 def _is_blocked(host: str) -> bool:
-    """Return True if the host resolves to a blocked/private network."""
+    """Return True if `host` is, or resolves to, a blocked/private network address.
+
+    A hostname that only resolves to a private/loopback/link-local address (e.g.
+    an attacker-controlled DNS name pointed at 127.0.0.1 or a cloud metadata IP)
+    is blocked too, not just literal IPs — otherwise SSRF protection is trivially
+    bypassed by fetching through DNS instead of an IP literal.
+    """
     try:
         info = urllib.parse.urlsplit(host)
         hostname = info.hostname or host
-        # Only block literal IP addresses; DNS names are allowed but resolved at request time.
+    except ValueError:
+        return True  # unparsable host; block defensively
+
+    try:
         ip = ipaddress.ip_address(hostname)
         return any(ip in net for net in BLOCKED_NETWORKS)
     except ValueError:
-        return False
+        pass  # not a literal IP; resolve it below
+
+    try:
+        resolved_ips = {addr[4][0] for addr in socket.getaddrinfo(hostname, None)}
+    except socket.gaierror:
+        return True  # cannot resolve; block defensively
+
+    for addr in resolved_ips:
+        try:
+            ip = ipaddress.ip_address(addr)
+        except ValueError:
+            continue
+        if any(ip in net for net in BLOCKED_NETWORKS):
+            return True
+    return False
 
 
 class APITool(Tool):

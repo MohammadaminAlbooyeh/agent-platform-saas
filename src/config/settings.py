@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     admin_username: str = "admin"
     admin_password: str = "admin"
+    file_tool_root: str = "./tenant_files"
 
     class Config:
         env_file = ".env"
