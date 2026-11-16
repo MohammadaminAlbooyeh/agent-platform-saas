@@ -4,12 +4,14 @@ from fastapi import APIRouter, Request, HTTPException
 
 from services.billing_service import BillingService
 from billing.invoice_generator import InvoiceGenerator
+from services.notification_service import NotificationService
 from services.usage_service import UsageService
 
 router = APIRouter(prefix="/billing")
 billing_service = BillingService()
 invoice_generator = InvoiceGenerator()
 usage_service = UsageService()
+notification_service = NotificationService()
 
 
 @router.post("/subscribe")
@@ -37,4 +39,6 @@ async def generate_invoice(request: Request, body: dict) -> dict:
     usage = usage_service.aggregate(tenant_id)
     invoice = invoice_generator.generate(tenant_id, usage)
     created = await billing_service.generate_invoice(tenant_id, invoice["total"])
+    if "error" not in created:
+        await notification_service.send_invoice_event(tenant_id, created["id"], "created")
     return {"invoice": created, "usage": invoice}

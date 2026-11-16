@@ -75,6 +75,15 @@ def test_admin_login_rejects_bad_credentials(client):
     assert r.status_code == 401
 
 
+def test_billing_invoice_generation(client, tenant):
+    tenant_id, api_key = tenant
+    r = client.post("/billing/invoice", json={}, headers={"x-api-key": api_key})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["invoice"]["tenant_id"] == tenant_id
+    assert body["invoice"]["status"] == "draft"
+
+
 def test_admin_quota_override_persists_and_is_enforced(client, tenant):
     tenant_id, api_key = tenant
 
